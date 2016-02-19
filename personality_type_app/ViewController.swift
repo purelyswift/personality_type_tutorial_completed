@@ -14,12 +14,12 @@ struct Question {
     var selectedAnswerIndex: Int?
 }
 
+var questionsList: [Question] = [Question(questionString: "What is your favorite type of food?", answers: ["Sandwiches", "Pizza", "Seafood", "Unagi"], selectedAnswerIndex: nil), Question(questionString: "What do you do for a living?", answers: ["Paleontologist", "Actor", "Chef", "Waitress"], selectedAnswerIndex: nil), Question(questionString: "Were you on a break?", answers: ["Yes", "No"], selectedAnswerIndex: nil)]
+
 class QuestionController: UITableViewController {
     
     let cellId = "cellId"
     let headerId = "headerId"
-    
-    var question = Question(questionString: "What is your favorite type of food?", answers: ["Sandwiches", "Pizza", "Seafood", "Unagi"], selectedAnswerIndex: nil)
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -37,46 +37,56 @@ class QuestionController: UITableViewController {
     }
     
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if let count = question.answers?.count {
-            return count
+        
+        if let index = navigationController?.viewControllers.indexOf(self) {
+            let question = questionsList[index]
+            if let count = question.answers?.count {
+                return count
+            }
         }
         return 0
     }
     
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier(cellId, forIndexPath: indexPath) as! AnswerCell
-        cell.nameLabel.text = question.answers?[indexPath.row]
+        
+        if let index = navigationController?.viewControllers.indexOf(self) {
+            let question = questionsList[index]
+            cell.nameLabel.text = question.answers?[indexPath.row]
+        }
+        
         return cell
     }
 
     override func tableView(tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         let header = tableView.dequeueReusableHeaderFooterViewWithIdentifier(headerId) as! QuestionHeader
-        header.nameLabel.text = question.questionString
+        
+        if let index = navigationController?.viewControllers.indexOf(self) {
+            let question = questionsList[index]
+            header.nameLabel.text = question.questionString
+        }
+        
         return header
     }
     
     override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         
-        question.selectedAnswerIndex = indexPath.row
-        
-        let controller = ResultsController()
-        controller.question = question
-        navigationController?.pushViewController(controller, animated: true)
+        if let index = navigationController?.viewControllers.indexOf(self) {
+            questionsList[index].selectedAnswerIndex = indexPath.item
+            
+            if index < questionsList.count - 1 {
+                let questionController = QuestionController()
+                navigationController?.pushViewController(questionController, animated: true)
+            } else {
+                let controller = ResultsController()
+                navigationController?.pushViewController(controller, animated: true)
+            }
+        }
     }
 
 }
 
 class ResultsController: UIViewController {
-    
-    var question: Question? {
-        didSet {
-            
-            let names = ["Ross", "Joey", "Chandler", "Monica", "Rachel", "Phoebe"]
-            
-            let result = names[question!.selectedAnswerIndex!]
-            resultsLabel.text = "Congratulations, you're a total \(result)!"
-        }
-    }
     
     let resultsLabel: UILabel = {
         let label = UILabel()
@@ -90,6 +100,8 @@ class ResultsController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Done", style: .Plain, target: self, action: "done")
+        
         navigationItem.title = "Results"
         
         view.backgroundColor = UIColor.whiteColor()
@@ -97,6 +109,20 @@ class ResultsController: UIViewController {
         view.addSubview(resultsLabel)
         view.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat("H:|[v0]|", options: NSLayoutFormatOptions(), metrics: nil, views: ["v0": resultsLabel]))
         view.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat("V:|[v0]|", options: NSLayoutFormatOptions(), metrics: nil, views: ["v0": resultsLabel]))
+        
+        let names = ["Ross", "Joey", "Chandler", "Monica", "Rachel", "Phoebe"]
+        
+        var score = 0
+        for question in questionsList {
+            score += question.selectedAnswerIndex!
+        }
+        
+        let result = names[score % names.count]
+        resultsLabel.text = "Congratulations, you're a total \(result)!"
+    }
+    
+    func done() {
+        navigationController?.popToRootViewControllerAnimated(true)
     }
     
 }
